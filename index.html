@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ワインラップバトル｜SAKENOTE</title>
+<style>
+  /* 配色：日本酒版の黒×金と対に、ボルドーの闇×ロゼ。文字のコントラストは地に対して ロゼ約9.9・補足約8.2・更新日約5.1 */
+  :root{
+    --bg:#100709; --bg2:#1b0e12; --ink:#f6eeea; --sub:#c4a9a6;
+    --acc:#e3aaa2; --acc2:#9c3b4c; --red:#d24b4b; --blue:#5b8cc9;
+    --line:#3b2028; --card:#221116;
+    --sans:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    --mincho:"Hiragino Mincho ProN","Yu Mincho",serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#33121d 0%,var(--bg) 55%) fixed;
+       color:var(--ink);font-family:var(--sans);line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:28px 16px 80px}
+  header{text-align:center;margin-bottom:22px}
+  .brand{letter-spacing:.5em;font-size:12px;color:var(--acc);margin:0 0 8px;font-weight:700}
+  h1{font-family:var(--mincho);font-size:clamp(28px,6vw,46px);margin:0;font-weight:900;
+     background:linear-gradient(180deg,#fff 0%,var(--acc) 55%,#c8857f 100%);
+     -webkit-background-clip:text;background-clip:text;color:transparent;
+     text-shadow:0 2px 20px rgba(227,170,162,.15)}
+  .tag{color:var(--sub);font-size:13px;margin-top:8px}
+  .panel{background:linear-gradient(180deg,var(--card),#170b0f);border:1px solid var(--line);
+         border-radius:18px;padding:20px;margin-top:18px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+  .panel h2{font-size:13px;letter-spacing:.2em;color:var(--acc);margin:0 0 14px;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .fighter{position:relative;background:var(--bg2);border:1.5px solid var(--line);border-radius:14px;
+           padding:14px 12px;cursor:pointer;transition:.18s;text-align:center;user-select:none}
+  .fighter:hover{transform:translateY(-3px);border-color:var(--acc2)}
+  .fighter .emoji{font-size:34px;line-height:1;display:block;margin-bottom:6px}
+  .fighter .fname{display:block;font-family:var(--mincho);font-size:17px;font-weight:800;line-height:1.35}
+  .fighter .fdesc{display:block;font-size:11px;color:var(--sub);margin-top:4px;min-height:28px}
+  /* 説明は1文1行（2行に揃える）。各文は句点込み11字以内。カードがそれより狭い時だけ字を小さくする */
+  .fighter{container-type:inline-size}
+  .fighter .fdesc .ln{display:block;white-space:nowrap;font-size:min(11px,calc(100cqi / 11.5))}
+  .fighter.sel-a{border-color:var(--red);box-shadow:0 0 0 2px rgba(210,75,75,.35),0 0 24px rgba(210,75,75,.25)}
+  .fighter.sel-b{border-color:var(--blue);box-shadow:0 0 0 2px rgba(91,140,201,.35),0 0 24px rgba(91,140,201,.25)}
+  .fighter .badge{position:absolute;top:-9px;right:-9px;font-size:10px;font-weight:800;padding:3px 8px;
+                  border-radius:20px;color:#fff}
+  .badge.a{background:var(--red)} .badge.b{background:var(--blue)}
+  .pinfo{position:absolute;top:0;right:0;width:44px;height:44px;display:flex;align-items:flex-start;justify-content:flex-end;padding:6px 8px 0 0;background:none;border:none;color:var(--sub);font-size:15px;cursor:pointer;line-height:1;z-index:2;transition:color .15s}
+  .pinfo:hover{color:var(--acc)}
+  .pmodal{position:fixed;inset:0;background:rgba(0,0,0,.66);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .pcard{background:var(--bg2);border:1px solid var(--line);border-radius:16px;max-width:640px;width:100%;max-height:85vh;overflow:auto;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .pcard h3{font-family:var(--mincho);font-size:22px;margin:0 0 4px}
+  .pcard .pdesc{color:var(--sub);font-size:12px;margin-bottom:14px}
+  .pcard .prow{font-size:13px;margin:5px 0;line-height:1.65}
+  .pcard .prow b{color:var(--acc)}
+  .pcard table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px}
+  .pcard th,.pcard td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;line-height:1.5}
+  .pcard th{color:var(--sub);font-weight:700;white-space:nowrap}
+  .pcard .pdis{color:#e8b0a0} .pcard .presp{color:#a8c8e0}
+  .pcard .pclose{float:right;background:none;border:1px solid var(--line);border-radius:8px;color:var(--sub);cursor:pointer;padding:4px 12px;font-size:12px}
+  .pcard .pclose:hover{color:var(--ink);border-color:var(--acc2)}
+  .hint{font-size:12px;color:var(--sub);margin-top:12px;text-align:center}
+  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:18px}
+  .opt{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--sub)}
+  .kodawari{flex-basis:100%;text-align:center;font-size:13px;color:var(--sub)}
+  .kodawari summary{cursor:pointer}
+  .kodawari .controls{margin-top:10px}
+  select{background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:8px;
+         padding:7px 10px;font-family:var(--sans);font-size:13px}
+  .btn{border:none;border-radius:999px;padding:14px 30px;font-size:16px;font-weight:800;cursor:pointer;
+       font-family:var(--mincho);letter-spacing:.08em;transition:.15s}
+  .btn-main{background:linear-gradient(180deg,#e8b4ac,#c98a83);color:#3a0f1c;
+            box-shadow:0 8px 24px rgba(227,170,162,.2)}
+  .btn-main:hover{transform:translateY(-2px)}
+  .btn-main:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn-ghost{background:transparent;color:var(--acc);border:1px solid var(--acc2);font-size:13px;padding:9px 18px}
+  .btn-ghost:hover{background:rgba(227,170,162,.1)}
+  .btn-ghost:disabled{opacity:.4;cursor:not-allowed;background:transparent}
+  #stage{margin-top:22px;display:none}
+  .vs-head{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;text-align:center}
+  .vs-head .who{font-family:var(--mincho);font-size:22px;font-weight:900}
+  .vs-head .who.a{color:var(--red)} .vs-head .who.b{color:var(--blue)}
+  .vs-head .vs{font-size:14px;color:var(--acc);font-weight:800;letter-spacing:.2em}
+  .beat{display:flex;gap:5px;justify-content:center;margin:0 0 18px;height:20px;align-items:flex-end}
+  .beat i{width:5px;background:var(--acc2);border-radius:3px;animation:bounce 1s ease-in-out infinite}
+  @keyframes bounce{0%,100%{height:6px;opacity:.4}50%{height:20px;opacity:1}}
+  .verse{background:var(--card);border-radius:14px;padding:16px 18px;margin-bottom:14px;border-left:4px solid;
+         opacity:0;transform:translateY(12px);animation:rise .5s forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .verse.a{border-color:var(--red)} .verse.b{border-color:var(--blue)}
+  .verse .head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:var(--mincho);font-weight:800}
+  .verse .head .em{font-size:22px}
+  .verse .head .rk{font-size:10px;color:var(--sub);font-weight:600;letter-spacing:.05em;margin-left:auto}
+  .verse.a .head{color:var(--red)} .verse.b .head{color:var(--blue)}
+  .verse .bars{font-size:17px;font-family:var(--mincho);white-space:pre-line;line-height:2}
+  .verse .rhyme{color:var(--acc);font-weight:700}
+  .drop{text-align:center;margin:22px 0 4px;font-family:var(--mincho);font-size:clamp(22px,5vw,34px);
+        font-weight:900;color:var(--acc);opacity:0;animation:rise .5s .2s forwards}
+  .cheer{text-align:center;color:var(--sub);font-size:13px;margin-bottom:6px;opacity:0;animation:rise .5s .35s forwards}
+  .stage-ctrls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
+         background:var(--acc);color:#3a0f1c;padding:10px 20px;border-radius:999px;font-weight:800;
+         font-size:13px;transition:.25s;pointer-events:none;z-index:20}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  footer{text-align:center;color:var(--sub);font-size:11px;margin-top:34px;line-height:1.9}
+  .updated{display:inline-block;font-size:10px;color:#94787a;letter-spacing:.04em;margin-top:8px;opacity:.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="brand">SAKENOTE PRESENTS</p>
+    <h1>ワインラップバトル</h1>
+    <p class="tag">ブドウ畑の MC たちが韻を踏む</p>
+  </header>
+
+  <div class="panel">
+    <h2>対戦カードを選べ</h2>
+    <div class="grid" id="roster"></div>
+    <p class="hint" id="selHint">上から2体を選ぶと対戦成立。1体目が <span style="color:var(--red)">赤コーナー</span>、2体目が <span style="color:var(--blue)">青コーナー</span>。</p>
+    <div class="controls">
+      <button class="btn btn-main" id="go" disabled>▶ バトル開始</button>
+      <details class="kodawari"><summary>こだわり</summary>
+        <div class="controls">
+          <label class="opt">長さ
+            <select id="bars"><option value="2">最短</option><option value="4">短い</option><option value="8" selected>ふつう</option><option value="12">長い</option></select>
+          </label>
+          <label class="opt">韻の踏み方
+            <select id="mode"><option value="solo" selected>自分の韻</option><option value="cross">相手に返す</option></select>
+          </label>
+          <label class="opt">音
+            <select id="beatSel"><option value="off" selected>なし</option><option value="boombap">ブンバップ</option><option value="lofi">ローファイ</option><option value="trap">トラップ</option><option value="funk">ファンク</option></select>
+          </label>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div id="stage">
+    <div class="vs-head">
+      <span class="who a" id="nameA"></span>
+      <span class="vs">VS</span>
+      <span class="who b" id="nameB"></span>
+    </div>
+    <div class="beat" id="beat"></div>
+    <div id="battle"></div>
+    <div class="stage-ctrls">
+      <button class="btn btn-main" id="regen">🎲 もう一本</button>
+      <button class="btn btn-ghost" id="copy">📋 リリックをコピー</button>
+      <button class="btn btn-ghost" id="saveImg">🖼 画像で保存</button>
+      <button class="btn btn-ghost" id="swap">🔁 攻守交代</button>
+      <button class="btn btn-ghost" id="reset">← 対戦選び直す</button>
+    </div>
+  </div>
+
+  <footer>
+    歌詞はAIで書いたもの。品種の話は日本醸造協会誌の記事から。<br>
+    © SAKENOTE<br>
+    <span class="updated" id="updated">最終更新: 2026-10-18</span>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+<div class="pmodal" id="pmodal" style="display:none;"><div class="pcard" id="pcard"></div></div>
+
+<script>
+/* =========================================================
+   ワインラップバトル（蔵出し＝名勝負ミックスだけ）
+   docs/wine_corpus.jsonl のバトルを2行組に切り、同じ相手・同じ韻の2行組を別のバトルから繋いで1バースにする。
+   組み替えの規則は醸造ラップバトル（../brew-rap-battle/index.html）の名勝負ミックスと同じ。検証は node mix_test.js
+   ========================================================= */
+
+function rng(seed){let s=seed>>>0||1;return ()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return((s>>>0)%100000)/100000;};}
+function shuffle(a,rnd){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+// 響き韻（i≈e・u≈o、最後の母音は一致）で束ねるキー
+const _NEAR={a:"a",i:"i",e:"i",u:"u",o:"u"};
+const softKey = s => s ? s.slice(0,-1).split("").map(c=>_NEAR[c]||c).join("")+s.slice(-1) : s;
+
+// ---- キャラ（説明は1文1行・各文は句点込み11字以内。事実は varieties_summary.md の限定なしの行と、personas.md の性格の言い換えだけ） ----
+const FIGHTERS = {
+  cab:    { name:"カベルネ・ソーヴィニヨン", emoji:"👑", desc:"渋みの骨格。ボルドーの王者。" },
+  merlot: { name:"メルロー",                 emoji:"🍇", desc:"角を丸めるつなぎ役。笑顔でちくりと刺す。" },
+  pinot:  { name:"ピノ・ノワール",           emoji:"🍒", desc:"皮一枚の詩人。寒い土地を生きる。" },
+  chard:  { name:"シャルドネ",               emoji:"🌼", desc:"気品ある白の優等生。丁寧語で皮肉る。" },
+  sauvb:  { name:"ソーヴィニヨン・ブラン",   emoji:"🌿", desc:"草の香りの姉御。個性で殴り込む。" },
+};
+
+// ---- 人格（モーダル表示と、組み替えの当てこすり判定に使う） ----
+// ==== PERSONA (auto: tools/gen_persona_js.py が docs/personas.md から生成。手で編集しない) ====
+const PERSONA = {
+  cab: {"pronoun": "我（われ）。相手は「おぬし」", "tone": "文語まじりの重々しい断定。「〜である」「〜と知れ」。急がない、時間を味方にした余裕", "pride": ["ボルドーの主要品種。世界各国で育つ高級品種とされる", "1993年の記事いわく、深い紫赤色・黒すぐりのような香り・渋みたっぷりで、腰が強く長生きするワインになる", "日本では1994年までに、メルロー・シャルドネと並んで優良ワインが商品化された", "日本での栽培を扱った1993年の記事では、高級種のわりに適地が広い"], "weakness": ["日本では時として熟しきれず、野菜のような青臭さが出たり、赤が淡かったりする", "青っぽい香りの成分は1975年に「我の印」と報告されたが、ほかのボルドー品種にも同じくらいある", "渋みが多く、メルローを混ぜると柔らかく早く飲み頃になる＝ひとりでは待たせる", "1993年の記事では、日本ではメルローより約10日遅く熟す"], "signature": ["骨格", "長命", "渋み"], "dis": {"merlot": "おぬしは我の渋みを薄める係にすぎぬ。九三年の書き物いわく、日本では十日も先に熟す——急ぐ者に骨格は宿らぬ", "pinot": "皮一枚の薄さ、色も褪せることがあるという。しかも房の軸には、青き香りを我らボルドーの者より多く抱えておるとか", "chard": "白は寒き土地の住人。我の渋みの重さは知るまい", "sauvb": "薬草臭く、やかましい香りよ。当時の日本では——九三年の話だが——房が小さく実入りも少ないとか"}, "respect": {"merlot": "だが、おぬしが混ざれば我は早く飲み頃を迎える。ボルドーの上物は、我らが組んでこそと知れ", "pinot": "我の印とされた青き香りが、おぬしの実にはほとんど出ぬ。その澄んだ実は見事である", "chard": "日本の地で、九四年までに共に栽培の努力が実り、優良の酒が世に出た。その実りを分かち合う者として認める", "sauvb": "おぬしは我の親である見込みが高い。我が血の源かもしれぬ者に、頭は下げておこう"}},
+  merlot: {"pronoun": "おいら。相手は「兄貴」「〜ちゃん」と気安く呼ぶ", "tone": "気さくで人懐っこい。「まあまあ」となだめながら、笑顔でちくりと刺す。語尾「〜だよ」「〜じゃない？」", "pride": ["ボルドーの主要品種の一つ。世界各国で育つ高級品種とされる", "1993年の記事では、香りが高く豊かで柔らかい。その柔らかさでCSとのブレンドに多く使われる", "日本では1993年時点で、長野県塩尻市桔梗ヶ原のメルローが世界の一流ワインと並ぶ評価", "2014年の記事では、山梨県内のワイナリーの52.4%がメルローを使っている"], "weakness": ["比較的早く熟す品種。2011年のボルドーでは、ボトリチスの被害が出た", "日本ではCSと同じく、時として熟しきれず青臭さが出たり、色が淡かったりする。国産の市販メルローにも青っぽい香りの成分がCSと同じくらいあった", "「CSの渋みを和らげる役」と見られがち"], "signature": ["まろやか", "つなぎ役"], "dis": {"cab": "兄貴、ひとりじゃ渋すぎて飲み頃が遠いんだよ。おいらが混ざってやっと丸くなるじゃない？ 日本じゃ青っぽい香りもおいらと同じくらいだったしさ", "pinot": "昔の記事（93年）だと、日本じゃ育てにくいって言われてたよね。気難しいのも芸のうち？", "chard": "優等生ぶってても、比べてみたら灰色かび病にかかりやすいって話もあるよ？ まあまあ", "sauvb": "とんがりすぎだよ〜。おいらみたいに混ざって場を丸くする器用さ、ないでしょ"}, "respect": {"cab": "でも93年の記事じゃ、腰が強くて長生きってさ。兄貴の背骨は頼もしいよ、おいらが寄りかかれる柱だね", "pinot": "ある分析じゃ、おいらとピノちゃん（ブルゴーニュ以外の）の香りの成分が同じくらいなんだって。似てるとこ、あるじゃない", "chard": "1993年当時の長野じゃ、ヨーロッパ系の品種の中ではおいらとシャルドネが主力。いい相棒だったよ", "sauvb": "でもそのとんがった強い個性、おいらには出せない一発だね"}},
+  pinot: {"pronoun": "ぼく。相手は「きみ」", "tone": "ささやくように静か、ため息まじりの比喩。「……」で間を取り、最後に鋭い一言を置く", "pride": ["ブルゴーニュの主要品種。シャンパーニュでも主要3品種の一つで、2011年の統計では原料の32.2%", "良質のものは色・香り・ボディ・きめ細かさに優れる。シャンパーニュでは力強さと赤い果実の香りが特徴", "最も冷涼な気候区分の赤品種", "皮にカビから実を守る成分を多くためる", "日本では、北海道で難しかった栽培が1998年の気候の変わり目を境にできるようになったという研究がある"], "weakness": ["皮が薄く、色素が不安定。熟成中に色が褪せたり茶色くなったりすることがある", "1993年の記事では、いちばん早く熟し実が密着するので日本での栽培は難しい（ただし冷涼で寒暖差が大きく雨の少ない土地なら完熟する）", "ロゼシャンパーニュに混ぜる赤は、ムニエの方がよく使われる", "実には青っぽい香りの成分がほとんど出ないが、房の軸にはボルドー品種より多い"], "signature": ["繊細", "赤い果実", "寒い土地"], "dis": {"cab": "……きみの印の青い香り、ぼくの実にはほとんど出ないんだ。日本では、きみの方が時々熟しきれずに青くなるって", "merlot": "柔らかいだけじゃ、誰かの渋みを和らげる係のまま……きみ自身の声はどこ？", "chard": "きみの親は「ピノ」と推定されてる……ぼくだとは書いてないけど、少しは頭が上がらないんじゃない？", "sauvb": "当時の日本では……1993年の記事だけど、きみも育てにくいって言われてたね……強がりな香りの割に"}, "respect": {"cab": "腰が強くて長く生きる。ぼくの色は褪せるのに……その時間の強さは、正直うらやましい", "merlot": "ある分析では、きみとぼく（ブルゴーニュの外の）の香りの成分が同じくらいだって。遠くで同じ歌を歌ってるみたいだ", "chard": "シャンパーニュでは、きみとぼくとムニエで1/3ずつ。3つの中で長い熟成にいちばん向くのはきみだと考えられてる……そこは認めるよ", "sauvb": "NZの畑は、きみとぼくとシャルドネで約77%。同じ畑で肩を並べる仲間だ"}},
+  chard: {"pronoun": "わたくし。相手は「〜さん」「あなた」", "tone": "丁寧語を崩さない慇懃無礼。「〜でございますね」「ご存じでしょうか」。にっこりしたまま皮肉を言う", "pride": ["ブルゴーニュの最高級品種とされる。シャンパーニュでも主要3品種の一つで、コート・デ・ブランなどの名産地を持つ", "1993年の記事では、熟成すると特有の風味が加わる。シャンパーニュでは上品・繊細・白い花と柑橘の香りで、3品種の中で最も長期熟成に向くと考えられている", "2000年の記事では、樽発酵で最も成功した白ワインはシャルドネだろうとされる", "日本では比較的育てやすい（1993年。完熟には適地選びが必要）。冷涼な地域で管理を適正にすれば国産でも高品質になるとした研究がある"], "weakness": ["3品種の比較では、灰色かび病に甲州・マスカット・ベーリーAよりかかりやすい", "NY州フィンガーレイク地方では病気が多く、寒波で新芽がやられた", "親は「ピノ」×グーエ・ブランと推定される＝血筋を言われると弱い"], "signature": ["気品", "樽", "白い花"], "dis": {"cab": "日本でお育ちになると、時々熟しきれずに青臭くなられるとか。わたくしは比較的育てやすいと書かれておりましたが", "merlot": "いつもどなたかの角を取るお役目、お疲れさまでございます。ご自分の主張はおありで？", "pinot": "お色が熟成で褪せることもあるそうで。わたくしは寝かせるほど風味が加わりますのに", "sauvb": "あなたの名で知られる柑橘の香り、あなただけのものではございませんのよ。わたくしの香りにも効いております"}, "respect": {"cab": "1994年までに日本で、ご一緒に栽培の努力が実り、優良ワインが世に出ました。その実りには敬意を", "merlot": "あの頃——1993年の長野で、ヨーロッパ系の品種の主力として並んだのはあなたとわたくし。心強い隣人でございました", "pinot": "わたくしの親は「ピノ」と推定されております。あなたの系統かもしれませんね。それにシャンパーニュでは1/3ずつの相棒でございます", "sauvb": "長野のある試験では、朝に摘むとその香りの成分が約2倍に。あなたの看板の香り、わたくしも頼りにしております"}},
+  sauvb: {"pronoun": "あたし。相手は「あんた」", "tone": "早口でずけずけ、ノリよくまくし立てる。「〜じゃん」「〜だろ？」「ほら見な」。面倒見はいい", "pride": ["ボルドーとロワールの高級品種。ボルドーではセミヨンとともに主に栽培される", "NZを代表する白ワインで、マールボロが最大の産地", "1993年の記事では、薬草の香りのある個性の強いワインになる", "香りはグレープフルーツやツゲの芽にたとえられ、柑橘のような成分を持つ。「草っぽい」「ハーブっぽい」はSBの特徴として広く知られた言葉", "CSの親である可能性が高い"], "weakness": ["その香りの系統（チオール）はSBだけのものではなく、多くの品種から出る", "青っぽい香りの成分も1990年代は特徴とされたが、フランスのグループは別の成分を代表とした", "1993年の記事では、房が小さく収量が少ないので日本では経済栽培が難しい", "白の中ではタンパク質が多く、ピンキングという現象が時々起こる"], "signature": ["草の香り", "グレープフルーツ", "個性"], "dis": {"cab": "あんたの親、あたしかもしれないんだよ？ 可能性が高いってさ。口のきき方に気をつけな", "merlot": "混ぜ物担当でしょ？ ひとりで勝負張ったことある？", "pinot": "ロゼの泡に混ぜる赤、ムニエの方がよく呼ばれるんだってね。繊細すぎて出番逃してない？", "chard": "あたしで知られた柑橘の香り、ちゃっかり使ってんじゃん"}, "respect": {"cab": "世界中で育つ高級品種、腰が強くて長生き。子かもしれない子がでっかくなったもんだ、誇らしいじゃん", "merlot": "2014年の山梨じゃ、ワイナリーの半分以上があんたを使ってる。その愛され方、あたしには真似できないね", "pinot": "NZの畑の約77%、あんたとあたしとシャルドネで回してんだ。同じ畑の戦友だろ", "chard": "長野のある試験じゃ、朝摘みでその香りが約2倍だって？ やるじゃん、優等生"}},
+};
+// ==== /PERSONA ====
+
+// ---- 名勝負ミックス（コーパスの2行組を組み替える）----
+let CORPUS = null;
+const CP_RESP = /^[^、。！!]{0,16}[？?]|だと[？?]|と来たか|ときたか|って[？?]|^(?!いいか)[^、。！!？?]{1,7}か、/;   // 相手の行への返し＝他の文脈に移せない
+const CP_CONN = /^(だが|でも|なら|だから|それ|その|しかし|そして|けど|だけど|つまり|だって|ただ|もっとも)/;   // 前の行を受ける書き出し＝バースの頭に置かない
+// 相手を名指ししない2行組（自慢系）は、どの相手との戦いにも持ち出せる。ただし元の相手の領分の語を含む行は当てこすりなので持ち出さない
+const CP_YOU = /お前|おまえ|貴様|あんた|あなた|おぬし|きみ|君は|君の|君が|兄貴|ちゃん|さん|二人|ふたり|お互い|互い|並んで|一緒|組んで|組め|組む|組もう|手を組|相棒|仲間|戦友|隣人|我ら|ぼくら|おいらたち|あたしら|親/;   // 二人称と、相手との関係を語る語（親子の縁も特定の相手向け）
+const CP_ALIAS = {cab:['カベルネ'], merlot:['メルロー'], pinot:['ピノ'], chard:['シャルドネ'], sauvb:['ブラン']};
+// 各キャラの領分の語（名指ししなくても、これを含む行はその相手への当てこすりになりうる）。personas.md の誇り・弱点・看板語の言い換えから
+const CP_DOMAIN = {cab:['渋','骨格','長命','長生き','黒すぐり','背骨','王'], merlot:['まろやか','丸','柔らか','つなぎ','橋渡し','混ざ','混ぜ','桔梗ヶ原','塩尻','山梨'],
+                   pinot:['繊細','皮一枚','薄い皮','赤い果実','赤い実','寒い土地','北風','褪せ','ガラス','ブルゴーニュ'], chard:['気品','樽','白い花','品格','優等生','花の香り','灰色かび'],
+                   sauvb:['草','グレープフルーツ','柑橘','ハーブ','薬草','ツゲ','個性','とんがり','クセ','マールボロ']};
+function cpGeneric(sp, opp, t){
+  if(CP_YOU.test(t)) return false;
+  for(const k in CP_ALIAS){ if(k!==sp && CP_ALIAS[k].some(a=>t.includes(a))) return false; }
+  const own = [...(CP_DOMAIN[sp]||[]), ...((typeof PERSONA!=='undefined' && PERSONA[sp]) ? PERSONA[sp].signature : [])];
+  const theirs = [...(CP_DOMAIN[opp]||[]), ...((typeof PERSONA!=='undefined' && PERSONA[opp]) ? PERSONA[opp].signature : [])].filter(w=>!own.includes(w));   // 自分の領分と完全一致する語だけ外す
+  return !theirs.some(w=>t.includes(w));
+}
+// 返しの1行目が、直前のバース（prev）の締め語（最後の行の最後の印）を頭で拾っているか。どちらかがもう一方を含むでも可（tools/factory.py と同じ判定）
+function cpPicked(line, prev){
+  const m=String(line).match(/^[\s「『（(]*<span class="rhyme">([^<]+)<\/span>/);
+  const f=(prev && Array.isArray(prev.lines) && prev.lines[3]) ? [...String(prev.lines[3]).matchAll(/<span class="rhyme">([^<]*)<\/span>/g)] : [];
+  if(!m || !f.length) return false;
+  const h=m[1].trim(), last=f[f.length-1][1].trim();
+  return !!(h && last && (h===last || h.includes(last) || last.includes(h)));
+}
+// 返しの1行目が直前のバースの印の語（行末・中韻どれでも）を含むか＝相手の言葉を引いて受けている（別の試合に移ると何を受けているか分からなくなる）
+function cpQuotes(line, prev){
+  const t=String(line).replace(/<[^>]*>/g,'');
+  const ws=(prev && Array.isArray(prev.lines)) ? prev.lines.flatMap(l=>[...String(l).matchAll(/<span class="rhyme">([^<]*)<\/span>/g)].map(m=>m[1].trim())) : [];
+  return ws.some(w=>w && t.includes(w));
+}
+// weak＝甘いバースの集合（キー「L行番号V バース番号」）。ワイン版はまだリストが無いので空＝後回しは効かない
+function parseCorpus(text, weak){
+  const pools = {}, battles = [];
+  weak = weak || new Set();
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safe = l => esc(String(l).replace(/<span class="rhyme">([^<]*)<\/span>/g,'【$1】').replace(/<[^>]*>/g,'')).replace(/【([^【】]+)】/g,'<span class="rhyme">$1</span>');
+  const strip = l => String(l).replace(/<[^>]*>/g,'');
+  String(text).split('\n').forEach((ln,bi)=>{
+    let d; try{ d=JSON.parse(ln); }catch(e){ return; }
+    battles[bi] = {aId:d.aId, bId:d.bId, theme:d.theme||'', flavor:esc((d.data&&d.data.flavor)||'')};
+    ((d.data&&d.data.verses)||[]).forEach((v,vi)=>{
+      const sp=v.characterId, opp = sp===d.aId ? d.bId : d.aId;
+      const key=String(v.displayRhyme||'').replace(/[^aiueo]/g,'').slice(-3);
+      if(!FIGHTERS[sp] || !FIGHTERS[opp] || sp===opp || key.length<3 || !Array.isArray(v.lines) || v.lines.length!==4) return;
+      for(const c of [0,2]){
+        if(c===0 && vi>0 && (cpPicked(v.lines[0], d.data.verses[vi-1]) || cpQuotes(v.lines[0], d.data.verses[vi-1]))) continue;   // 相手の締め語を頭で拾った返し・相手の印の語を引いた返しの冒頭は他の文脈に移せない
+        const L=v.lines.slice(c,c+2), t0=strip(L[0]);
+        if(CP_RESP.test(t0) || CP_RESP.test(strip(L[1]))) continue;
+        const ends=L.map(l=>{ const m=[...String(l).matchAll(/<span class="rhyme">([^<]*)<\/span>/g)]; return m.length?m[m.length-1][1]:''; });
+        if(ends.some(e=>!e) || ends[0]===ends[1]) continue;
+        const k=sp+'|'+softKey(key);
+        const tt=t0+strip(L[1]);
+        const flat=tt.replace(/[、。！？!?\s]/g,''), g6=new Set(); for(let i=0;i+6<=flat.length;i++) g6.add(flat.slice(i,i+6));
+        const words=L.flatMap(l=>[...String(l).matchAll(/<span class="rhyme">([^<]*)<\/span>/g)].map(m=>m[1]));   // 行の途中の韻（中韻）も含む印の語すべて
+        (pools[k]=pools[k]||[]).push({b:bi, sig:key, opp, gen:cpGeneric(sp,opp,tt), head:!CP_CONN.test(t0), theme:d.theme||'', lines:L.map(safe), ends, words, g6, weak:weak.has('L'+(bi+1)+'V'+vi)});
+      }
+    });
+  });
+  return {pools, battles};
+}
+async function loadMixCorpus(){
+  try{
+    const r = await fetch('docs/wine_corpus.jsonl', {cache:'no-store'});
+    if(r.ok) CORPUS = parseCorpus(await r.text());
+  }catch(e){ /* file:// 等では読めない→画面で「サーバー経由で開いてください」 */ }
+}
+const cpFits = (c,opp) => c.opp===opp || c.gen;   // この相手に向けて使える2行組
+function corpusKeys(sp,opp){ const p=sp+'|'; return Object.keys(CORPUS.pools).filter(k=>k.startsWith(p) && CORPUS.pools[k].some(c=>cpFits(c,opp))).map(k=>k.slice(p.length)); }
+const CP_RECENT = new Set();   // 直前のバトルで使った2行組（「もう一本」で同じ歌詞が続かないよう、なるべく避ける）
+function corpusPair(sp,opp,key,rnd,st,allowSaid,allowWeak,half){
+  // お題は1バトル1種（st.theme）。お題なしの2行組はどのバトルにも使える
+  const ok = c => cpFits(c,opp) && !st.used.has(c) && (!c.theme || c.theme===st.theme);
+  const all=(CORPUS.pools[sp+'|'+key]||[]).filter(ok);
+  // 同じバトルでこのキャラが既に使った言い回しを含む2行組は、なるべく避ける
+  const said=st.said&&st.said[sp], clean=c=>!said || ![...c.g6].some(g=>said.has(g));
+  const pool=allowWeak ? all : all.filter(c=>!c.weak);   // 甘いバース由来の2行組は、どの韻でも組めない時だけ使う
+  const fresh=pool.filter(c=>!CP_RECENT.has(c));
+  if(!allowSaid) return corpusPairFrom(fresh.filter(clean),rnd,half) || corpusPairFrom(pool.filter(clean),rnd,half);
+  return corpusPairFrom(fresh,rnd,half) || corpusPairFrom(pool,rnd,half);
+}
+// half（長さ「最短」）は頭に置ける2行組を1つだけ＝1バース2行
+function corpusPairFrom(pool,rnd,half){
+  if(half){ const hs=pool.filter(c=>c.head); return hs.length ? [hs[Math.floor(rnd()*hs.length)]] : null; }
+  for(const h of shuffle(pool.filter(c=>c.head),rnd)){
+    const rest=pool.filter(c=>c!==h && !c.words.some(w=>h.words.includes(w)) && ![...c.g6].some(g=>h.g6.has(g)) && (!h.theme||!c.theme||c.theme===h.theme));
+    if(!rest.length) continue;
+    const other=rest.filter(c=>c.b!==h.b);   // 別バトルから＝組み替え
+    const from=other.length?other:rest;
+    return [h, from[Math.floor(rnd()*from.length)]];
+  }
+  return null;
+}
+function corpusVerse(sp,opp,rnd,st,allowKeys,saidModes,half){
+  let keys=shuffle(allowKeys||corpusKeys(sp,opp),rnd);
+  keys=[...keys.filter(k=>!st.keys.has(sp+k)), ...keys.filter(k=>st.keys.has(sp+k))];   // 同じ韻を続けない
+  // まず全部の韻で「言い回しの重複なし・甘くない2行組」を探し、どの韻でも組めない時だけ甘い2行組→言い回しの重複の順に許す
+  for(const allowSaid of (saidModes||[false,true])) for(const allowWeak of [false,true]) for(const key of keys){
+    const pr=corpusPair(sp,opp,key,rnd,st,allowSaid,allowWeak,half);
+    if(!pr) continue;
+    pr.forEach(c=>{ st.used.add(c); st.said=st.said||{}; const z=(st.said[sp]=st.said[sp]||new Set()); c.g6.forEach(g=>z.add(g)); });
+    if(allowSaid) st.saidHit=(st.saidHit||0)+1;   // 言い回しの重複を許して組んだ回数（お題選びの減点に使う）
+    st.keys.add(sp+key);
+    return {key, lines:pr.flatMap(c=>c.lines)};
+  }
+  return null;
+}
+// お題を先に1つ決めて（お題なしも候補）、そのお題で最後まで組めたら採用。組めなければ次のお題を試す
+// half=true は長さ「最短」（1往復・1バース2行）
+function corpusBattle(aId,bId,rounds,seed,cross,half){
+  const themes=new Set();
+  for(const k in CORPUS.pools){ if(k.startsWith(aId+'|')||k.startsWith(bId+'|')) CORPUS.pools[k].forEach(c=>{ if(c.theme) themes.add(c.theme); }); }
+  const cand=[null, ...shuffle([...themes],rng(seed^4242))];
+  // お題なし:お題つき＝1:1で先頭候補を選ぶ
+  if(rng(seed^77)()<0.5 && cand.length>1){ cand.push(cand.shift()); }
+  // 組めたお題の中から選ぶ基準: ①跨ぎ韻の踏み返しが多く成立 ②同じキャラの言い回しの重複が少ない ③甘いバース由来の2行組が少ない ④直前のバトルと同じ2行組が少ない
+  const score = b => (cross && b.crossOK ? b.crossMiss*100 : 0) + b.saidHit*10 + b.used.filter(c=>c.weak).length*3 + b.used.filter(c=>CP_RECENT.has(c)).length;
+  let best=null, bs=Infinity;
+  for(const th of cand){
+    const b=corpusBattleWith(aId,bId,rounds,seed,cross,th,half);
+    if(!b) continue;
+    const v=score(b);
+    if(v===0) return b;
+    if(v<bs){ best=b; bs=v; }
+  }
+  return best;
+}
+function corpusBattleWith(aId,bId,rounds,seed,cross,theme,half){
+  const st={used:new Set(), keys:new Set(), theme}, out=[];
+  const shared = cross ? corpusKeys(aId,bId).filter(k=>corpusKeys(bId,aId).includes(k)) : [];
+  const clone = s => ({used:new Set(s.used), keys:new Set(s.keys), theme:s.theme, saidHit:s.saidHit||0, said:Object.fromEntries(Object.entries(s.said||{}).map(([k,v])=>[k,new Set(v)]))});
+  let miss=0;
+  for(let r=0;r<rounds;r++){
+    const ra=rng(seed^((r*2+1)*131)), rb=rng(seed^((r*2+2)*197));
+    let pair=null;
+    // キャラ跨ぎ韻：先攻の組を仮置きした上で（お題の確定も含めて）後攻が同じ韻を組めるものだけ採る＝踏み返し
+    const ks=shuffle(shared,ra);
+    for(const mode of [[false],[true]]){
+      for(const k of ks){
+        const t=clone(st);
+        const va=corpusVerse(aId,bId,ra,t,[k],mode,half); if(!va) continue;
+        const vb=corpusVerse(bId,aId,rb,t,[k],mode,half); if(!vb) continue;
+        Object.assign(st,t); pair=[va,vb]; break;
+      }
+      if(pair) break;
+    }
+    if(!pair){
+      if(shared.length) miss++;
+      const va=corpusVerse(aId,bId,ra,st,null,undefined,half); if(!va) return null;
+      const vb=corpusVerse(bId,aId,rb,st,null,undefined,half); if(!vb) return null;
+      pair=[va,vb];
+    }
+    out.push([aId,pair[0]],[bId,pair[1]]);
+  }
+  return {verses:out, crossOK: shared.length>0, crossMiss: miss, theme, used:[...st.used], saidHit: st.saidHit||0};
+}
+// 締めの一杯：組んだ2行組の出どころのうち、同じ組み合わせ（向きは問わない）のバトルの flavor。無ければその組み合わせの別のバトルから
+function battleFlavor(cb, aId, bId, seed){
+  const same = i => { const t=CORPUS.battles[i]; return t && ((t.aId===aId&&t.bId===bId)||(t.aId===bId&&t.bId===aId)) && t.flavor; };
+  let idx=[...new Set(cb.used.map(c=>c.b))].filter(same);
+  if(!idx.length) idx=CORPUS.battles.map((_,i)=>i).filter(i=>same(i) && (!cb.theme || CORPUS.battles[i].theme===cb.theme || !CORPUS.battles[i].theme));
+  if(!idx.length) return '';
+  return CORPUS.battles[idx[Math.floor(rng(seed^999)()*idx.length)]].flavor;
+}
+
+// ---- 選択UI ----
+const roster = document.getElementById('roster');
+const barsSel = document.getElementById('bars');
+const modeSel = document.getElementById('mode');
+const go = document.getElementById('go');
+const stage = document.getElementById('stage');
+const battle = document.getElementById('battle');
+const beat = document.getElementById('beat');
+const nameA = document.getElementById('nameA');
+const nameB = document.getElementById('nameB');
+const selHint = document.getElementById('selHint');
+let selected = [];
+const corpusReady = loadMixCorpus();
+
+function showStage(html){
+  battle.innerHTML = html;
+  beat.innerHTML = Array.from({length:16}).map((_,i)=>`<i style="animation-delay:${(i*0.06).toFixed(2)}s"></i>`).join("");
+  stage.style.display="block";
+  stage.scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function renderBattle(){
+  if(selected.length!==2) return;
+  const [aId,bId] = selected;
+  const bars = parseInt(barsSel.value,10);
+  const half = bars === 2;   // 最短＝1往復・1バース2行
+  const seed = (Date.now() ^ (bars*7)) >>> 0;
+  const a = FIGHTERS[aId], b = FIGHTERS[bId];
+  nameA.textContent = `${a.emoji} ${a.name}`;
+  nameB.textContent = `${b.emoji} ${b.name}`;
+  startBeat();   // バトル開始でビート再生（クリック=ユーザー操作なので自動再生ブロックに掛からない）
+
+  await corpusReady;
+  if(!CORPUS){ showStage(`<div class="cheer" style="animation-delay:0s">歌詞の材料を読めませんでした。サーバー経由で開いてください。</div>`); return; }
+  const cross = modeSel.value==='cross';
+  const cb = corpusBattle(aId, bId, half ? 1 : Math.max(1, Math.round(bars/4)), seed, cross, half);
+  if(!cb){ showStage(`<div class="cheer" style="animation-delay:0s">この組み合わせは、まだ歌詞が足りません。長さを短くしてみてください。</div>`); return; }
+  CP_RECENT.clear(); cb.used.forEach(c=>CP_RECENT.add(c));
+  let html = "", delay = 0;
+  if(cross && !cb.crossOK) html += `<div class="cheer" style="animation-delay:0s">※ この2体は共通の韻がないため、今回は自分の韻で踏みます</div>`;
+  else if(cross && cb.crossMiss) html += `<div class="cheer" style="animation-delay:0s">※ 共通の韻が尽きたラウンドは自分の韻で踏みます</div>`;
+  cb.verses.forEach(([id,v],i)=>{
+    const f=FIGHTERS[id];
+    html += `<div class="verse ${i%2?'b':'a'}" style="animation-delay:${delay}s">
+    <div class="head"><span class="em">${f.emoji}</span>${f.name}<span class="rk">韻:-${v.key}</span></div>
+    <div class="bars">${v.lines.join("\n")}</div>
+  </div>`;
+    delay+=0.15;
+  });
+  html += `<div class="drop">🎤 …mic drop.</div>`;
+  const flavor = battleFlavor(cb, aId, bId, seed);
+  if(flavor) html += `<div class="cheer">🍷 今宵の一杯は「${flavor}」で乾杯</div>`;
+  showStage(html);
+}
+
+Object.entries(FIGHTERS).forEach(([id,f])=>{
+  const el = document.createElement('div');
+  el.className='fighter'; el.dataset.id=id;
+  el.innerHTML=`<button class="pinfo" title="人格を見る">ⓘ</button><span class="emoji">${f.emoji}</span><span class="fname">${f.name}</span><span class="fdesc">${f.desc.split('。').filter(Boolean).map(t=>`<span class="ln">${t}。</span>`).join('')}</span>`;
+  el.onclick=()=>toggle(id);
+  el.querySelector('.pinfo').onclick=(e)=>{ e.stopPropagation(); showPersona(id); };  // 選択と衝突させない
+  roster.appendChild(el);
+});
+
+// personas.md の文中の略称（CS など）を、画面では名前に戻す（生成し直しても効くよう表示側で置き換える）
+const ABBR = {CS:'カベルネ・ソーヴィニヨン', ME:'メルロー', PN:'ピノ・ノワール', CH:'シャルドネ', SB:'ソーヴィニヨン・ブラン', NZ:'ニュージーランド', NY:'ニューヨーク'};
+const unabbr = s => String(s).replace(/(^|[^A-Za-z])(CS|ME|PN|CH|SB|NZ|NY)(?![A-Za-z])/g, (m,pre,a)=>pre+ABBR[a]);
+// キャラの人格シートをモーダル表示（PERSONA＝docs/personas.md から生成したものを直接読む）
+function showPersona(id){
+  const f=FIGHTERS[id], p0=PERSONA[id]; if(!p0) return;
+  const p={...p0, pronoun:unabbr(p0.pronoun), tone:unabbr(p0.tone), pride:p0.pride.map(unabbr), weakness:p0.weakness.map(unabbr),
+           dis:Object.fromEntries(Object.entries(p0.dis||{}).map(([k,v])=>[k,unabbr(v)])), respect:Object.fromEntries(Object.entries(p0.respect||{}).map(([k,v])=>[k,unabbr(v)]))};
+  let rows='';
+  for(const oid in FIGHTERS){ if(oid===id) continue;
+    const dis=(p.dis&&p.dis[oid])||'—', resp=(p.respect&&p.respect[oid])||'—';
+    rows+=`<tr><td>${FIGHTERS[oid].emoji} ${FIGHTERS[oid].name}</td><td class="pdis">${dis}</td><td class="presp">${resp}</td></tr>`;
+  }
+  document.getElementById('pcard').innerHTML=
+    `<button class="pclose" onclick="document.getElementById('pmodal').style.display='none'">閉じる ✕</button>`+
+    `<h3>${f.emoji} ${f.name}</h3><div class="pdesc">${f.desc}</div>`+
+    `<div class="prow"><b>一人称</b>：${p.pronoun}</div>`+
+    `<div class="prow"><b>口調</b>：${p.tone}</div>`+
+    `<div class="prow"><b>誇り</b>：${p.pride.join('／')}</div>`+
+    `<div class="prow"><b>弱点</b>：${p.weakness.join('／')}</div>`+
+    `<div class="prow"><b>口癖</b>：${p.signature.join('・')}</div>`+
+    `<table><thead><tr><th>相手</th><th>ディス（攻め口）</th><th>リスペクト</th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('pmodal').style.display='flex';
+}
+document.getElementById('pmodal').onclick=(e)=>{ if(e.target.id==='pmodal') e.currentTarget.style.display='none'; };  // 外側クリックで閉じる
+
+function toggle(id){
+  const idx = selected.indexOf(id);
+  if(idx>=0){ selected.splice(idx,1); }
+  else if(selected.length<2){ selected.push(id); }
+  else { selected=[selected[1],id]; }
+  refreshSel();
+}
+function refreshSel(){
+  document.querySelectorAll('.fighter').forEach(el=>{
+    el.classList.remove('sel-a','sel-b');
+    const oldBadge = el.querySelector('.badge'); if(oldBadge) oldBadge.remove();
+    const i = selected.indexOf(el.dataset.id);
+    if(i===0){ el.classList.add('sel-a'); el.insertAdjacentHTML('beforeend','<span class="badge a">赤</span>'); }
+    if(i===1){ el.classList.add('sel-b'); el.insertAdjacentHTML('beforeend','<span class="badge b">青</span>'); }
+  });
+  go.disabled = selected.length!==2;
+  if(selected.length===2){
+    const [a,b]=selected;
+    selHint.innerHTML = `<b style="color:var(--red)">${FIGHTERS[a].name}</b> × <b style="color:var(--blue)">${FIGHTERS[b].name}</b> ── 準備OK！`;
+  }else{
+    selHint.innerHTML = `上から2体を選ぶと対戦成立。1体目が <span style="color:var(--red)">赤コーナー</span>、2体目が <span style="color:var(--blue)">青コーナー</span>。`;
+  }
+}
+
+go.onclick = renderBattle;
+document.getElementById('regen').onclick = renderBattle;
+document.getElementById('swap').onclick = ()=>{ selected.reverse(); refreshSel(); renderBattle(); };
+document.getElementById('reset').onclick = ()=>{ stopBeat(); stage.style.display='none'; window.scrollTo({top:0,behavior:'smooth'}); };
+
+// ---- ビートエンジン：Web Audioで手続き生成（オフライン・無依存）。定番のラップビートをプリセットから選択 ----
+//   16ステップのパターン(kick/snare/hat/bass)をBPM＋スイングで並べてループ。lookaheadスケジューラで安定再生。
+const beatSel = document.getElementById('beatSel');
+const BEATS = {
+  boombap:{ bpm:88, swing:0.56, lp:20000,
+    kick:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    hat:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1], open:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+    bass:[55,0,0,0,0,0,82.41,0,0,0,65.41,0,0,0,0,0],
+    p:{kf0:130,kf1:45,kd:.34,sd:.18,st:180,hf:8000,hd:.03,hod:.16,bt:'triangle',bg:.55} },
+  lofi:{ bpm:74, swing:0.60, lp:3000,
+    kick:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    hat:[1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0], open:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    bass:[55,0,0,0,0,0,0,0,73.41,0,0,0,0,0,0,0],
+    p:{kf0:110,kf1:42,kd:.42,sd:.22,st:170,hf:5500,hd:.05,hod:.2,bt:'sine',bg:.5} },
+  trap:{ bpm:140, swing:0.50, lp:20000, clap:true,
+    kick:[1,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0], snare:[0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
+    hat:[1,0,1,0,1,0,2,0,1,0,1,0,1,2,1,2], open:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    bass:[55,0,0,0,0,0,65.41,0,0,0,0,49,0,0,55,0],
+    p:{kf0:120,kf1:40,kd:.30,sd:.16,st:200,hf:9000,hd:.025,hod:.12,bt:'sine',bg:.62,glide:true} },
+  funk:{ bpm:96, swing:0.54, lp:20000,
+    kick:[1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    hat:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], open:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    bass:[55,0,55,0,0,82.41,0,0,65.41,0,0,73.41,0,82.41,0,0],
+    p:{kf0:125,kf1:44,kd:.30,sd:.18,st:185,hf:8500,hd:.028,hod:.14,bt:'sawtooth',bg:.42} },
+};
+let _ac,_master,_lp,_noise,_timer=null,_step=0,_nextT=0,_playing=false,_preset=BEATS.boombap;
+function _ensureAudio(){
+  if(!_ac){
+    _ac=new (window.AudioContext||window.webkitAudioContext)();
+    _master=_ac.createGain(); _master.gain.value=0.85;
+    _lp=_ac.createBiquadFilter(); _lp.type='lowpass'; _lp.frequency.value=20000;
+    const comp=_ac.createDynamicsCompressor();
+    _master.connect(_lp); _lp.connect(comp); comp.connect(_ac.destination);
+    _noise=_ac.createBuffer(1,_ac.sampleRate,_ac.sampleRate);
+    const d=_noise.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  if(_ac.state==='suspended') _ac.resume();
+}
+function _eg(peak,t,a,dcy){ const g=_ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+a+dcy); return g; }
+function _kick(t,p){ const o=_ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(p.kf0,t); o.frequency.exponentialRampToValueAtTime(p.kf1,t+0.07); const g=_eg(1,t,0.002,p.kd); o.connect(g).connect(_master); o.start(t); o.stop(t+p.kd+0.05); }
+function _noiseHit(t,peak,hp,dcy){ const n=_ac.createBufferSource(); n.buffer=_noise; const f=_ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=hp; const g=_eg(peak,t,0.002,dcy); n.connect(f).connect(g).connect(_master); n.start(t); n.stop(t+dcy+0.05); }
+function _snare(t,p,clap){ if(clap){ [0,0.012,0.024].forEach(o=>_noiseHit(t+o,0.5,1800,0.09)); } else { _noiseHit(t,0.6,p.sf||1600,p.sd); const o=_ac.createOscillator(); o.type='triangle'; o.frequency.value=p.st; const g=_eg(0.35,t,0.002,p.sd*0.7); o.connect(g).connect(_master); o.start(t); o.stop(t+p.sd); } }
+function _hat(t,p,open){ _noiseHit(t, open?0.32:0.3, p.hf, open?p.hod:p.hd); }
+function _bass(t,freq,dur,p){ const o=_ac.createOscillator(); o.type=p.bt; o.frequency.setValueAtTime(freq,t); if(p.glide) o.frequency.exponentialRampToValueAtTime(freq*0.5,t+dur*0.9); const g=_eg(p.bg,t,0.006,dur); o.connect(g).connect(_master); o.start(t); o.stop(t+dur+0.05); }
+function _s16(){ return (60/_preset.bpm)/4; }
+function _schedStep(step,t){
+  const P=_preset, p=P.p, s=_s16();
+  if(P.kick[step]) _kick(t,p);
+  if(P.snare[step]) _snare(t,p,P.clap);
+  const hv=P.hat[step];
+  if(hv===1) _hat(t,p,P.open[step]);
+  else if(hv===2){ _hat(t,p,false); _hat(t+s*0.5,p,false); }   // ハイハットのロール
+  else if(P.open[step]) _hat(t,p,true);
+  if(P.bass[step]) _bass(t,P.bass[step],s*2,p);
+}
+function _scheduler(){
+  const s=_s16(), sw=_preset.swing||0.5;
+  while(_nextT < _ac.currentTime + 0.1){
+    _schedStep(_step,_nextT);
+    _nextT += (_step%2===0) ? s*2*sw : s*2*(1-sw);   // スイング（偶数16分を伸ばす）
+    _step=(_step+1)%16;
+  }
+}
+function startBeat(){
+  if(!beatSel || beatSel.value==='off') return;
+  _preset=BEATS[beatSel.value]||BEATS.boombap;
+  _ensureAudio(); if(_lp) _lp.frequency.value=_preset.lp||20000;
+  if(_playing) return;
+  _step=0; _nextT=_ac.currentTime+0.12; _playing=true; _timer=setInterval(_scheduler,25);
+}
+function stopBeat(){ _playing=false; if(_timer){ clearInterval(_timer); _timer=null; } }
+
+const BEAT_KEY = 'wine_rap_beat';   // github.io は同じ持ち主のページで保存場所を共有するので、日本酒版と別の名前にする
+if(beatSel){
+  try{ const b=localStorage.getItem(BEAT_KEY); if(b && BEATS[b]) beatSel.value = b; }catch(e){}   // 選択を復元
+  beatSel.onchange=()=>{
+    try{ localStorage.setItem(BEAT_KEY, beatSel.value); }catch(e){}
+    if(beatSel.value==='off'){ stopBeat(); return; }
+    _preset=BEATS[beatSel.value]; if(_lp) _lp.frequency.value=_preset.lp||20000;
+    if(stage.style.display!=='none' && !_playing) startBeat();   // バトル表示中なら即鳴らす
+  };
+}
+document.getElementById('copy').onclick = ()=>{
+  const text = battle.innerText.replace(/\n{2,}/g,'\n\n');
+  navigator.clipboard.writeText(`🎤 ワインラップバトル｜${FIGHTERS[selected[0]].name} VS ${FIGHTERS[selected[1]].name}\n\n${text}\n\n— SAKENOTE ワインラップバトル`)
+    .then(()=>toast('リリックをコピーしました！'))
+    .catch(()=>toast('コピーに失敗…手動で選択してください'));
+};
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+// ---- 画像で保存：バトル結果をCanvas 2Dで共有カードに描き起こしてPNG化（外部ライブラリ不要）----
+const IMG = { W:1080, PAD:56, CARD_PAD:30, LINE:44, GAP:22, FS:29 };
+const IMG_URL = 'y-kanno-sakenote.github.io/wine-rap-battle';
+const MINCHO = '"Hiragino Mincho ProN","Yu Mincho",serif';
+const SANS = '"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif';
+// バトルDOM → 描画用データ（韻スパンは {t,r:true} セグメントとして保持）
+function collectBattle(){
+  return [...battle.querySelectorAll('.verse')].map(v=>{
+    const em = v.querySelector('.em')?.textContent || '';
+    const rk = v.querySelector('.rk')?.textContent || '';
+    const name = (v.querySelector('.head')?.textContent || '').replace(em,'').replace(rk,'').trim();
+    const lines = (v.querySelector('.bars')?.innerHTML || '').split('\n').map(html=>{
+      const segs=[]; const re=/<span class="rhyme">([^<]*)<\/span>/g; let last=0,m;
+      while((m=re.exec(html))){
+        if(m.index>last) segs.push({t:html.slice(last,m.index).replace(/<[^>]+>/g,''),r:false});
+        segs.push({t:m[1],r:true}); last=re.lastIndex;
+      }
+      if(last<html.length) segs.push({t:html.slice(last).replace(/<[^>]+>/g,''),r:false});
+      return segs.map(s=>({...s,t:s.t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'")})).filter(s=>s.t);
+    }).filter(segs=>segs.length);
+    return { side: v.classList.contains('a')?'a':'b', em, name, rk, lines };
+  });
+}
+// セグメント列を折り返して行配列にする（日本語なので1文字ずつ詰める）
+function wrapSegs(ctx, segs, maxW){
+  const out=[]; let cur=[], w=0;
+  for(const s of segs) for(const ch of s.t){
+    const cw=ctx.measureText(ch).width;
+    if(w+cw>maxW && cur.length){ out.push(cur); cur=[]; w=0; }
+    cur.push({ch,r:s.r}); w+=cw;
+  }
+  if(cur.length) out.push(cur);
+  return out;
+}
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function buildBattleCanvas(){
+  const verses = collectBattle();
+  if(!verses.length) return null;
+  const {W,PAD,CARD_PAD,LINE,GAP,FS} = IMG;
+  const innerW = W - PAD*2, textW = innerW - CARD_PAD*2;
+
+  // 1st pass: 測って高さを決める
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.font = `${FS}px ${MINCHO}`;
+  const layout = verses.map(v=>({ v, rows: v.lines.flatMap(segs=>wrapSegs(probe,segs,textW)) }));
+  const headH = 52;
+  const cardH = l => headH + l.rows.length*LINE + CARD_PAD*2;
+  const topH = 210;
+  const H = topH + layout.reduce((s,l)=>s+cardH(l)+GAP,0) + 130;
+
+  const scale = 2;
+  const cv = document.createElement('canvas');
+  cv.width = W*scale; cv.height = H*scale;
+  const ctx = cv.getContext('2d'); ctx.scale(scale,scale);
+
+  // 背景
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#2a1018'); bg.addColorStop(1,'#100709');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  // ヘッダ
+  ctx.textBaseline='alphabetic'; ctx.textAlign='center';
+  ctx.fillStyle='#c4a9a6'; ctx.font=`600 20px ${SANS}`;
+  ctx.fillText('S A K E N O T E   P R E S E N T S', W/2, 74);
+  ctx.fillStyle='#e3aaa2'; ctx.font=`bold 62px ${MINCHO}`;
+  ctx.fillText('ワインラップバトル', W/2, 142);
+  const A=FIGHTERS[selected[0]], B=FIGHTERS[selected[1]];
+  ctx.font=`bold 30px ${MINCHO}`;
+  const vsTxt=`${A.emoji} ${A.name}　VS　${B.emoji} ${B.name}`;
+  ctx.fillStyle='#f6eeea'; ctx.fillText(vsTxt, W/2, 190, W-PAD*2);
+
+  // バース
+  ctx.textAlign='left';
+  let y = topH;
+  for(const l of layout){
+    const h = cardH(l), accent = l.v.side==='a' ? '#d24b4b' : '#5b8cc9';
+    ctx.fillStyle='#221116'; roundRect(ctx,PAD,y,innerW,h,18); ctx.fill();
+    ctx.fillStyle=accent; roundRect(ctx,PAD,y,7,h,4); ctx.fill();          // サイドの色帯
+    ctx.fillStyle=accent; ctx.font=`bold 30px ${MINCHO}`;
+    ctx.fillText(`${l.v.em} ${l.v.name}`, PAD+CARD_PAD, y+CARD_PAD+28);
+    if(l.v.rk){ ctx.fillStyle='#94787a'; ctx.font=`18px ${SANS}`; ctx.textAlign='right';
+      ctx.fillText(l.v.rk, W-PAD-CARD_PAD, y+CARD_PAD+26); ctx.textAlign='left'; }
+    let ty = y + CARD_PAD + headH;
+    ctx.font=`${FS}px ${MINCHO}`;
+    for(const row of l.rows){
+      let x = PAD+CARD_PAD;
+      for(const c of row){ ctx.fillStyle = c.r ? '#e3aaa2' : '#f6eeea'; ctx.fillText(c.ch,x,ty+FS); x += ctx.measureText(c.ch).width; }
+      ty += LINE;
+    }
+    y += h + GAP;
+  }
+
+  // フッタ
+  ctx.textAlign='center';
+  ctx.fillStyle='#e3aaa2'; ctx.font=`bold 30px ${MINCHO}`;
+  ctx.fillText('🎤 …mic drop.', W/2, y+40);
+  ctx.fillStyle='#94787a'; ctx.font=`19px ${SANS}`;
+  ctx.fillText(IMG_URL, W/2, y+80);
+
+  return cv;
+}
+function exportBattleImage(){
+  const cv = buildBattleCanvas();
+  if(!cv){ toast('先にバトルを生成してください'); return; }
+  const A=FIGHTERS[selected[0]], B=FIGHTERS[selected[1]];
+  cv.toBlob(blob=>{
+    if(!blob){ toast('画像の生成に失敗しました…もう一度お試しください'); return; }
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`wine-rap_${A.name}_vs_${B.name}.png`; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 0);
+    toast('画像を保存しました！');
+  }, 'image/png');
+}
+document.getElementById('saveImg').onclick = exportBattleImage;
+</script>
+</body>
+</html>
