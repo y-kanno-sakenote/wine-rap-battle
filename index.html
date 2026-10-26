@@ -110,6 +110,12 @@
   .verse.a{border-color:var(--red)} .verse.b{border-color:var(--blue)}
   .verse .head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:var(--mincho);font-weight:800}
   .verse .head .em{font-size:22px}
+  /* 顔アイコン（結果の画面・人格の窓）：丸・生成りの地・白フチ2px＋薄い影＝キャラカードのステッカーと同じ系統。4サイト同じ値 */
+  .face{display:inline-block;vertical-align:middle;box-sizing:border-box;border-radius:50%;background:#f4ecdc;
+        border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);object-fit:cover}
+  .face-alt{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .verse .head .em>.face{display:block}
+  .vs-head .who{display:inline-flex;align-items:center;gap:8px}
   .verse .head .rk{font-size:10px;color:var(--sub);font-weight:600;letter-spacing:.05em;margin-left:auto}
   .verse.a .head{color:var(--red)} .verse.b .head{color:var(--blue)}
   .verse .bars{font-size:17px;font-family:var(--mincho);white-space:pre-line;line-height:2}
@@ -401,6 +407,13 @@ function showStage(html){
   stage.style.display="block";
   stage.scrollIntoView({behavior:"smooth",block:"start"});
 }
+// 顔アイコン（img/faces/<id>.png を丸く切って出す）。FIGHTERS に無いキャラと、絵が読めない時は絵文字のまま
+// 絵文字は隠した文字で残す（リリックのコピー・画像で保存は今まで通り絵文字で出る）。絵が読めない時はその文字を見せる
+function faceIc(id, emoji, size){
+  if(!Object.prototype.hasOwnProperty.call(FIGHTERS, id)) return emoji;
+  return `<img class="face" src="img/faces/${id}.png" alt="" width="${size}" height="${size}" onerror="this.nextSibling.className='';this.remove()"><span class="face-alt">${emoji}</span>`;
+}
+
 async function renderBattle(){
   if(selected.length!==2) return;
   const [aId,bId] = selected;
@@ -408,8 +421,8 @@ async function renderBattle(){
   const half = bars === 2;   // 最短＝1往復・1バース2行
   const seed = (Date.now() ^ (bars*7)) >>> 0;
   const a = FIGHTERS[aId], b = FIGHTERS[bId];
-  nameA.textContent = `${a.emoji} ${a.name}`;
-  nameB.textContent = `${b.emoji} ${b.name}`;
+  nameA.textContent = a.name; nameA.insertAdjacentHTML('afterbegin', faceIc(aId, a.emoji, 48));
+  nameB.textContent = b.name; nameB.insertAdjacentHTML('afterbegin', faceIc(bId, b.emoji, 48));
   startBeat();   // バトル開始でビート再生（クリック=ユーザー操作なので自動再生ブロックに掛からない）
 
   await corpusReady;
@@ -424,7 +437,7 @@ async function renderBattle(){
   cb.verses.forEach(([id,v],i)=>{
     const f=FIGHTERS[id];
     html += `<div class="verse ${i%2?'b':'a'}" style="animation-delay:${delay}s">
-    <div class="head"><span class="em">${f.emoji}</span>${f.name}<span class="rk">韻:-${v.key}</span></div>
+    <div class="head"><span class="em">${faceIc(id, f.emoji, 34)}</span>${f.name}<span class="rk">韻:-${v.key}</span></div>
     <div class="bars">${v.lines.join("\n")}</div>
   </div>`;
     delay+=0.15;
@@ -457,11 +470,11 @@ function showPersona(id){
   let rows='';
   for(const oid in FIGHTERS){ if(oid===id) continue;
     const dis=(p.dis&&p.dis[oid])||'—', resp=(p.respect&&p.respect[oid])||'—';
-    rows+=`<tr><td>${FIGHTERS[oid].emoji} ${FIGHTERS[oid].name}</td><td class="pdis">${dis}</td><td class="presp">${resp}</td></tr>`;
+    rows+=`<tr><td>${faceIc(oid, FIGHTERS[oid].emoji, 22)} ${FIGHTERS[oid].name}</td><td class="pdis">${dis}</td><td class="presp">${resp}</td></tr>`;
   }
   document.getElementById('pcard').innerHTML=
     `<button class="pclose" onclick="document.getElementById('pmodal').style.display='none'">閉じる ✕</button>`+
-    `<h3>${f.emoji} ${f.name}</h3><div class="pdesc">${f.desc}</div>`+
+    `<h3>${faceIc(id, f.emoji, 30)} ${f.name}</h3><div class="pdesc">${f.desc}</div>`+
     `<div class="prow"><b>一人称</b>：${p.pronoun}</div>`+
     `<div class="prow"><b>口調</b>：${p.tone}</div>`+
     `<div class="prow"><b>誇り</b>：${p.pride.join('／')}</div>`+
