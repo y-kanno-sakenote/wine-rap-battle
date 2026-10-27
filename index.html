@@ -48,8 +48,14 @@
            drop-shadow(0 0 1px rgba(0,0,0,.4)) drop-shadow(0 6px 8px rgba(0,0,0,.35))}
   .fighter:nth-child(5n+1){--tilt:-4deg} .fighter:nth-child(5n+2){--tilt:3deg} .fighter:nth-child(5n+3){--tilt:-2deg}
   .fighter:nth-child(5n+4){--tilt:4deg} .fighter:nth-child(5n){--tilt:-3deg}
-  .fighter.sel-a .chr,.fighter.sel-b .chr{transform:rotate(0deg) scale(1.08)}
-  @media (prefers-reduced-motion: reduce){ .fighter,.fighter .chr{transition:none} }
+  /* 選ぶとポーズ違いの絵に替わり（refreshSel）、軽く跳ねてまっすぐ×1.08に収まる */
+  .fighter.sel-a .chr,.fighter.sel-b .chr{transform:rotate(0deg) scale(1.08);animation:posehop .25s ease-out}
+  @keyframes posehop{
+    0%  {transform:translateY(0) rotate(var(--tilt,0deg)) scale(1)}
+    45% {transform:translateY(-8px) rotate(0deg) scale(1.12)}
+    100%{transform:translateY(0) rotate(0deg) scale(1.08)}
+  }
+  @media (prefers-reduced-motion: reduce){ .fighter,.fighter .chr{transition:none} .fighter.sel-a .chr,.fighter.sel-b .chr{animation:none} }
   /* 名前の行の右端に ⓘ（絵とも名前とも重ならない） */
   .fighter .fhead{position:relative;display:block}
   .fighter .fname{display:block;font-family:var(--mincho);font-size:19px;font-weight:800;line-height:1.35}
@@ -453,7 +459,7 @@ const nameSegs = n => [...n].length>7 ? n.split('・') : [n];  // 長い名前�
 Object.entries(FIGHTERS).forEach(([id,f])=>{
   const el = document.createElement('div');
   el.className='fighter'; el.dataset.id=id;
-  el.innerHTML=`<img class="chr" src="img/chars/${id}.png" alt="${f.name}" width="200" height="200" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'emoji',textContent:'${f.emoji}'}))"><span class="fhead"><span class="fname" style="--n:${nameSegs(f.name).reduce((m,t)=>Math.max(m,[...t].length),0)}">${nameSegs(f.name).map(t=>`<span class="seg">${t}</span>`).join('')}</span><button class="pinfo" title="人格を見る">ⓘ</button></span><span class="fdesc">${f.desc.split('。').filter(Boolean).map(t=>`<span class="ln">${t}。</span>`).join('')}</span>`;
+  el.innerHTML=`<img class="chr" src="img/chars/${id}.png" alt="${f.name}" width="200" height="200" onerror="if(this.getAttribute('src').startsWith('img/pose/')){this.dataset.nopose='1';this.src='img/chars/${id}.png';}else this.replaceWith(Object.assign(document.createElement('span'),{className:'emoji',textContent:'${f.emoji}'}))"><span class="fhead"><span class="fname" style="--n:${nameSegs(f.name).reduce((m,t)=>Math.max(m,[...t].length),0)}">${nameSegs(f.name).map(t=>`<span class="seg">${t}</span>`).join('')}</span><button class="pinfo" title="人格を見る">ⓘ</button></span><span class="fdesc">${f.desc.split('。').filter(Boolean).map(t=>`<span class="ln">${t}。</span>`).join('')}</span>`;
   el.onclick=()=>toggle(id);
   el.querySelector('.pinfo').onclick=(e)=>{ e.stopPropagation(); showPersona(id); };  // 選択と衝突させない
   roster.appendChild(el);
@@ -492,11 +498,18 @@ function toggle(id){
   else { selected=[selected[1],id]; }
   refreshSel();
 }
+// 選ばれたカードはポーズ違いの絵、外れたら元の絵（ポーズ絵が読めない時は元の絵のまま＝onerror。絵文字に戻ったカードは何もしない）
+function setPose(el, on){
+  const img = el.querySelector('img.chr'); if(!img) return;
+  const src = `img/${on && !img.dataset.nopose ? 'pose' : 'chars'}/${el.dataset.id}.png`;
+  if(img.getAttribute('src')!==src) img.src = src;
+}
 function refreshSel(){
   document.querySelectorAll('.fighter').forEach(el=>{
     el.classList.remove('sel-a','sel-b');
     const oldBadge = el.querySelector('.badge'); if(oldBadge) oldBadge.remove();
     const i = selected.indexOf(el.dataset.id);
+    setPose(el, i>=0);
     if(i===0){ el.classList.add('sel-a'); el.insertAdjacentHTML('beforeend','<span class="badge a">赤</span>'); }
     if(i===1){ el.classList.add('sel-b'); el.insertAdjacentHTML('beforeend','<span class="badge b">青</span>'); }
   });
